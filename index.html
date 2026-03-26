@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pierina's Inventory</title>
+  <meta name="theme-color" content="#d80f1f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pierina's" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="logo.png" />
+  <style>
+    :root{
+      --bg:#0d0d10; --panel:#17171b; --panel-2:#202026; --panel-3:#2a2a31;
+      --text:#f5f5f6; --muted:#a4a4ad; --line:#2d2d35; --brand:#d80f1f;
+      --brand-2:#ff3348; --warn:#ffb020; --danger:#ff5b6e;
+      --shadow:0 10px 30px rgba(0,0,0,.28);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    body{min-height:100vh}
+    button,input{font:inherit}
+    #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at top left, rgba(216,15,31,.12), transparent 28%),radial-gradient(circle at bottom right, rgba(216,15,31,.10), transparent 24%),#050507;transition:opacity .45s ease,visibility .45s ease}
+    #splash.hide{opacity:0;visibility:hidden}
+    .splash-logo{width:min(72vw,300px);filter:drop-shadow(0 14px 30px rgba(216,15,31,.20))}
+    .splash-text{margin-top:18px;font-size:14px;letter-spacing:.22em;color:#d8d8dc;text-transform:uppercase}
+    .app{width:100%;max-width:440px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:92px;background:radial-gradient(circle at top left, rgba(216,15,31,.06), transparent 22%),radial-gradient(circle at bottom right, rgba(216,15,31,.05), transparent 25%),var(--bg)}
+    .topbar{position:sticky;top:0;z-index:30;backdrop-filter:blur(12px);background:linear-gradient(to bottom, rgba(13,13,16,.92), rgba(13,13,16,.76));padding:18px 18px 12px;border-bottom:1px solid rgba(255,255,255,.03)}
+    .brand-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand-side{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand-mark{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#ff3348,#b60d19);display:grid;place-items:center;box-shadow:var(--shadow);overflow:hidden;flex:0 0 auto}
+    .brand-mark img{width:100%;height:100%;object-fit:cover}
+    .brand-copy{min-width:0}
+    .brand-copy h1{margin:0;font-size:18px;line-height:1.05;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand-copy p{margin:5px 0 0;color:var(--muted);font-size:12px}
+    .icon-btn{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;background:var(--panel-2);color:var(--text);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+    .icon-btn svg{width:21px;height:21px}
+    .search-row{display:flex;gap:10px;margin-top:14px}
+    .search-wrap{flex:1;display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:18px;background:var(--panel);color:var(--muted);border:1px solid rgba(255,255,255,.04)}
+    .search-wrap input{flex:1;border:none;outline:none;background:transparent;color:var(--text);font-size:15px}
+    .search-wrap input::placeholder{color:#878790}
+    .search-wrap svg{width:19px;height:19px;flex:0 0 auto}
+    .screen{display:none;padding:16px 16px 0}
+    .screen.active{display:block}
+    .hero{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.04);padding:18px;border-radius:26px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:14px}
+    .hero h2{margin:0 0 8px;font-size:20px;line-height:1.05}
+    .hero p{margin:0;color:var(--muted);font-size:13px;max-width:210px}
+    .hero-badge{width:64px;height:64px;border-radius:22px;background:linear-gradient(135deg,#ff3348,#a80c18);display:grid;place-items:center;box-shadow:0 18px 35px rgba(216,15,31,.28);flex:0 0 auto}
+    .hero-badge svg{width:30px;height:30px}
+    .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+    .metric{background:var(--panel);border-radius:22px;padding:15px;border:1px solid rgba(255,255,255,.04);box-shadow:var(--shadow)}
+    .metric .mini{width:40px;height:40px;border-radius:14px;background:var(--panel-3);display:grid;place-items:center;margin-bottom:10px;color:var(--brand-2)}
+    .metric .value{font-size:28px;font-weight:800;line-height:1}
+    .metric .label{margin-top:6px;color:var(--muted);font-size:13px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 4px 12px}
+    .section-head h3{margin:0;font-size:18px}
+    .section-head button{border:none;background:none;color:#d7d7dc;cursor:pointer;font-size:13px}
+    .category-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .cat-card{background:var(--panel);border-radius:22px;padding:16px;border:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column;gap:10px;cursor:pointer;box-shadow:var(--shadow)}
+    .cat-icon{width:44px;height:44px;border-radius:16px;background:var(--panel-3);display:grid;place-items:center;color:var(--brand-2)}
+    .cat-title{font-size:15px;font-weight:800}
+    .cat-sub{font-size:12px;color:var(--muted)}
+    .chips{display:flex;gap:8px;overflow:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{border:none;cursor:pointer;white-space:nowrap;background:var(--panel);color:#d6d6da;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.05)}
+    .chip.active{background:var(--brand);color:#fff}
+    .table-wrap{background:var(--panel);border-radius:24px;overflow:hidden;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.04)}
+    .table-head,.table-row{display:grid;grid-template-columns:minmax(0,1.25fr) 58px 74px 74px;gap:10px;align-items:center;padding:14px 14px}
+    .table-head{background:rgba(255,255,255,.02);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+    .table-row{border-bottom:1px solid rgba(255,255,255,.04)}
+    .table-row:last-child{border-bottom:none}
+    .prod-main{display:flex;gap:12px;align-items:center;min-width:0}
+    .prod-thumb{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#2a2a31,#1a1a1f);display:grid;place-items:center;color:var(--brand-2);flex:0 0 auto;font-weight:800;font-size:14px}
+    .prod-info{min-width:0}
+    .prod-name{font-size:14px;font-weight:800;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .prod-meta{margin-top:5px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cell{font-size:13px;font-weight:700}
+    .stock-badge{display:inline-flex;min-width:46px;justify-content:center;align-items:center;padding:8px 10px;border-radius:14px;background:var(--panel-3);font-weight:800}
+    .stock-badge.low{color:var(--warn)}
+    .stock-badge.out{color:var(--danger)}
+    .money{font-weight:800}
+    .quick-actions{display:flex;justify-content:flex-end;gap:6px}
+    .mini-btn{width:32px;height:32px;border:none;border-radius:11px;cursor:pointer;background:var(--panel-3);color:#fff;font-weight:800}
+    .mini-btn.plus{background:rgba(30,215,96,.16);color:#9af2b7}
+    .mini-btn.minus{background:rgba(255,91,110,.15);color:#ff9eab}
+    .list-card{background:var(--panel);border-radius:22px;padding:14px;border:1px solid rgba(255,255,255,.04);box-shadow:var(--shadow);display:flex;gap:12px;align-items:center;margin-bottom:10px}
+    .list-card .dot{width:10px;height:10px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 6px rgba(255,176,32,.12);flex:0 0 auto}
+    .list-card.out .dot{background:var(--danger);box-shadow:0 0 0 6px rgba(255,91,110,.12)}
+    .list-card .title{font-weight:800;font-size:15px}
+    .list-card .sub{font-size:12px;color:var(--muted);margin-top:4px}
+    .list-card .right{margin-left:auto;text-align:right}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border-radius:999px;background:var(--panel-3);color:#fff;font-size:12px;font-weight:800}
+    .pill.low{color:var(--warn)}
+    .pill.out{color:var(--danger)}
+    .settings-card{background:var(--panel);border-radius:22px;padding:16px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.04)}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    .setting-row:last-child{border-bottom:none}
+    .setting-title{font-weight:700}
+    .setting-sub{font-size:12px;color:var(--muted);margin-top:4px}
+    .status-pill{font-size:12px;font-weight:800;padding:8px 10px;border-radius:999px;background:rgba(30,215,96,.15);color:#8af0ad}
+    .status-pill.warn{background:rgba(255,176,32,.14);color:#ffca66}
+    .status-note{margin:14px 4px 0;font-size:12px;color:var(--muted)}
+    .empty{padding:30px 16px;text-align:center;color:var(--muted);font-size:14px}
+    .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:62px;z-index:40;width:64px;height:64px;border:none;border-radius:50%;background:linear-gradient(135deg,#ff3348,#b70c19);color:#fff;cursor:pointer;box-shadow:0 18px 35px rgba(216,15,31,.32);display:grid;place-items:center}
+    .fab svg{width:28px;height:28px}
+    .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:440px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:10px 8px 18px;background:linear-gradient(to top, rgba(20,20,24,.98), rgba(20,20,24,.92));backdrop-filter:blur(14px);border-top:1px solid rgba(255,255,255,.05);z-index:35}
+    .nav-btn{border:none;background:none;color:#b4b4bb;cursor:pointer;padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px}
+    .nav-btn svg{width:20px;height:20px}
+    .nav-btn.active{color:var(--brand-2);font-weight:800}
+    @media (min-width:441px){body{background:#060608}.app{box-shadow:0 0 0 1px rgba(255,255,255,.05)}}
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <img class="splash-logo" src="logo.png" alt="Pierina's logo" />
+    <div class="splash-text">Inventario móvil</div>
+  </div>
+
+  <div class="app">
+    <div class="topbar">
+      <div class="brand-row">
+        <div class="brand-side">
+          <div class="brand-mark"><img src="logo.png" alt="Pierina's" /></div>
+          <div class="brand-copy">
+            <h1>Pierina's Store</h1>
+            <p id="syncStatus">Conectando inventario...</p>
+          </div>
+        </div>
+        <button class="icon-btn" id="syncBtn" aria-label="Sincronizar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="search-row">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+          </svg>
+          <input id="searchInput" placeholder="Buscar producto..." />
+        </div>
+        <button class="icon-btn" id="filterBtn" aria-label="Filtros">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 6h16M7 12h10M10 18h4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <section class="screen active" id="screen-home">
+        <div class="hero">
+          <div>
+            <h2>Tu tienda, organizada y rápida.</h2>
+            <p>Controla stock, precios y alertas desde el celular con un diseño moderno y simple.</p>
+          </div>
+          <div class="hero-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M6 7.5h12l-1 10.5H7L6 7.5Z"/><path d="M9 7.5a3 3 0 0 1 6 0"/>
+            </svg>
+          </div>
+        </div>
+        <div class="metrics" id="metricGrid"></div>
+        <div class="section-head">
+          <h3>Categorías</h3>
+          <button id="goCategoriesBtn">Ver todo</button>
+        </div>
+        <div class="category-grid" id="homeCategories"></div>
+        <div class="section-head">
+          <h3>Productos recientes</h3>
+          <button id="goInventoryBtn">Ver inventario</button>
+        </div>
+        <div id="recentList"></div>
+      </section>
+
+      <section class="screen" id="screen-inventory">
+        <div class="section-head" style="margin-top:4px;">
+          <h3>Inventario</h3>
+          <button id="resetFiltersBtn">Limpiar filtros</button>
+        </div>
+        <div class="chips" id="categoryChips"></div>
+        <div class="table-wrap">
+          <div class="table-head">
+            <div>Producto</div>
+            <div>Stock</div>
+            <div>Precio</div>
+            <div style="text-align:right;">Acción</div>
+          </div>
+          <div id="inventoryTable"></div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-categories">
+        <div class="section-head" style="margin-top:4px;">
+          <h3>Categorías</h3>
+          <button id="goInventoryBtn2">Ver productos</button>
+        </div>
+        <div class="category-grid" id="categoryGrid"></div>
+      </section>
+
+      <section class="screen" id="screen-alerts">
+        <div class="section-head" style="margin-top:4px;">
+          <h3>Alertas</h3>
+          <button id="alertsRefreshBtn">Actualizar</button>
+        </div>
+        <div id="alertsList"></div>
+      </section>
+
+      <section class="screen" id="screen-settings">
+        <div class="section-head" style="margin-top:4px;">
+          <h3>Ajustes</h3>
+        </div>
+        <div class="settings-card">
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Conexión con Google Sheets</div>
+              <div class="setting-sub">Pega tu URL de Apps Script en el archivo index.html</div>
+            </div>
+            <div class="status-pill" id="connectionPill">Activo</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Sincronización automática</div>
+              <div class="setting-sub">Se actualiza cada 10 segundos si no hay cambios pendientes</div>
+            </div>
+            <div class="status-pill">ON</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Tema visual</div>
+              <div class="setting-sub">Oscuro minimalista estilo Pierina's</div>
+            </div>
+            <div class="status-pill">Dark</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Instalación como app</div>
+              <div class="setting-sub">Usa “Agregar a pantalla principal” en Chrome</div>
+            </div>
+            <div class="status-pill warn">PWA</div>
+          </div>
+        </div>
+        <div class="status-note">Luego podemos añadir: agregar productos, edición de precios, ventas rápidas y reportes.</div>
+      </section>
+    </main>
+
+    <button class="fab" id="fabButton" aria-label="Acción rápida">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+    </button>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-screen="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg>
+        <span>Inicio</span>
+      </button>
+      <button class="nav-btn" data-screen="inventory">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <span>Inventario</span>
+      </button>
+      <button class="nav-btn" data-screen="categories">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+        <span>Categorías</span>
+      </button>
+      <button class="nav-btn" data-screen="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3a5 5 0 0 0-5 5v2.8c0 .6-.2 1.1-.5 1.6L5 15h14l-1.5-2.6c-.3-.5-.5-1-.5-1.6V8a5 5 0 0 0-5-5Z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
+        <span>Alertas</span>
+      </button>
+      <button class="nav-btn" data-screen="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 1 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 1 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 1 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 1 1 0 4h-.2a1 1 0 0 0-.9.6Z"/></svg>
+        <span>Ajustes</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    const URL = "https://script.google.com/macros/s/AKfycbxLtkGHEAq_9libcOBbR5-fI6Ww9gXVr4b-fEEvsd9PzjIqC9CnxosVuQ8_uNP7kdbLVA/exec";
+    let productos = [];
+    let searchTerm = "";
+    let selectedCategory = "TODOS";
+    let cambiosPendientes = new Map();
+    let saveTimers = {};
+    let isSyncing = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    function calcularEstado(stock, stockMinimo) {
+      const s = Number(stock);
+      const m = Number(stockMinimo);
+      if (s <= 0) return "out";
+      if (s <= m) return "low";
+      return "ok";
+    }
+
+    function currency(value) { return `S/ ${Number(value || 0).toFixed(2)}`; }
+    function initials(text) {
+      return String(text || "?").split(" ").filter(Boolean).slice(0,2).map(t => t[0].toUpperCase()).join("");
+    }
+    function setSyncStatus(text, warn = false) {
+      $("syncStatus").textContent = text;
+      $("connectionPill").className = "status-pill" + (warn ? " warn" : "");
+      $("connectionPill").textContent = warn ? "Revisar" : "Activo";
+    }
+
+    function renderMetrics() {
+      const total = productos.length;
+      const low = productos.filter(p => p.estado === "low").length;
+      const out = productos.filter(p => p.estado === "out").length;
+      const value = productos.reduce((a,p) => a + Number(p.stock) * Number(p.precio), 0);
+      $("metricGrid").innerHTML = `
+        <div class="metric"><div class="mini">📦</div><div class="value">${total}</div><div class="label">Productos</div></div>
+        <div class="metric"><div class="mini">⚠️</div><div class="value">${low}</div><div class="label">Stock bajo</div></div>
+        <div class="metric"><div class="mini">⛔</div><div class="value">${out}</div><div class="label">Agotados</div></div>
+        <div class="metric"><div class="mini">💰</div><div class="value" style="font-size:22px">${currency(value)}</div><div class="label">Valor inventario</div></div>
+      `;
+    }
+
+    function getCategories() {
+      return ["TODOS", ...new Set(productos.map(p => String(p.categoria || "Sin categoría").trim()).filter(Boolean))];
+    }
+
+    function renderHomeCategories() {
+      const cats = getCategories().slice(0,4);
+      $("homeCategories").innerHTML = cats.map(cat => {
+        const count = cat === "TODOS" ? productos.length : productos.filter(p => p.categoria === cat).length;
+        const safe = cat.replace(/'/g, "\'");
+        return `<button class="cat-card" onclick="openCategory('${safe}')"><div class="cat-icon">${cat === "TODOS" ? "🧾" : "🏷️"}</div><div class="cat-title">${cat}</div><div class="cat-sub">${count} producto(s)</div></button>`;
+      }).join("");
+    }
+
+    function renderCategoryGrid() {
+      const cats = getCategories();
+      $("categoryGrid").innerHTML = cats.map(cat => {
+        const count = cat === "TODOS" ? productos.length : productos.filter(p => p.categoria === cat).length;
+        const safe = cat.replace(/'/g, "\'");
+        return `<button class="cat-card" onclick="openCategory('${safe}')"><div class="cat-icon">${cat === "TODOS" ? "🧾" : "📁"}</div><div class="cat-title">${cat}</div><div class="cat-sub">${count} producto(s)</div></button>`;
+      }).join("");
+    }
+
+    function filteredProducts() {
+      return productos.filter(p => {
+        const matchesSearch = String(p.producto || "").toLowerCase().includes(searchTerm);
+        const matchesCategory = selectedCategory === "TODOS" || p.categoria === selectedCategory;
+        return matchesSearch && matchesCategory;
+      });
+    }
+
+    function renderChips() {
+      const cats = getCategories();
+      $("categoryChips").innerHTML = cats.map(cat => {
+        const safe = cat.replace(/'/g, "\'");
+        return `<button class="chip ${selectedCategory === cat ? "active" : ""}" onclick="setCategory('${safe}')">${cat}</button>`;
+      }).join("");
+    }
+
+    function renderRecentList() {
+      const recent = productos.slice(0,4);
+      $("recentList").innerHTML = recent.map(p => `
+        <div class="list-card ${p.estado}">
+          <div class="dot"></div>
+          <div><div class="title">${p.producto}</div><div class="sub">${p.categoria} · ${currency(p.precio)} · Stock ${p.stock}</div></div>
+          <div class="right"><div class="pill ${p.estado}">${p.estado === "out" ? "Agotado" : p.estado === "low" ? "Bajo" : "OK"}</div></div>
+        </div>`).join("");
+    }
+
+    function renderInventoryTable() {
+      const items = filteredProducts();
+      if (!items.length) {
+        $("inventoryTable").innerHTML = `<div class="empty">No hay productos que coincidan con tu búsqueda.</div>`;
+        return;
+      }
+      $("inventoryTable").innerHTML = items.map(p => `
+        <div class="table-row">
+          <div class="prod-main">
+            <div class="prod-thumb">${initials(p.producto)}</div>
+            <div class="prod-info">
+              <div class="prod-name">${p.producto}</div>
+              <div class="prod-meta">${p.categoria} · mínimo ${p.stockMinimo}</div>
+            </div>
+          </div>
+          <div class="cell"><span class="stock-badge ${p.estado}">${p.stock}</span></div>
+          <div class="cell money">${currency(p.precio)}</div>
+          <div class="quick-actions">
+            <button class="mini-btn minus" onclick="changeStock('${p.id}', -1)">−</button>
+            <button class="mini-btn plus" onclick="changeStock('${p.id}', 1)">+</button>
+          </div>
+        </div>`).join("");
+    }
+
+    function renderAlerts() {
+      const alerts = productos.filter(p => p.estado === "low" || p.estado === "out");
+      if (!alerts.length) {
+        $("alertsList").innerHTML = `<div class="settings-card"><div class="empty">No hay alertas por ahora. Todo va bien.</div></div>`;
+        return;
+      }
+      $("alertsList").innerHTML = alerts.map(p => `
+        <div class="list-card ${p.estado}">
+          <div class="dot"></div>
+          <div><div class="title">${p.producto}</div><div class="sub">${p.categoria} · stock ${p.stock} · mínimo ${p.stockMinimo}</div></div>
+          <div class="right"><div class="pill ${p.estado}">${p.estado === "out" ? "Agotado" : "Stock bajo"}</div></div>
+        </div>`).join("");
+    }
+
+    function renderAll() {
+      renderMetrics();
+      renderHomeCategories();
+      renderCategoryGrid();
+      renderRecentList();
+      renderChips();
+      renderInventoryTable();
+      renderAlerts();
+      const pending = cambiosPendientes.size;
+      setSyncStatus(pending > 0 ? `Guardando ${pending} cambio(s)...` : `Inventario listo · ${productos.length} productos`);
+    }
+
+    async function cargarProductos() {
+      try {
+        setSyncStatus("Sincronizando inventario...");
+        const res = await fetch(URL);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error("Respuesta inválida");
+        productos = data.map(p => ({
+          ...p,
+          categoria: String(p.categoria || "Sin categoría"),
+          stock: Number(p.stock || 0),
+          precio: Number(p.precio || 0),
+          stockMinimo: Number(p.stockMinimo || 0),
+          estado: calcularEstado(p.stock || 0, p.stockMinimo || 0)
+        }));
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        setSyncStatus("No se pudo conectar. Revisa tu URL.", true);
+      }
+    }
+
+    function setCategory(cat) { selectedCategory = cat; renderChips(); renderInventoryTable(); }
+    function openCategory(cat) { selectedCategory = cat; openScreen("inventory"); renderChips(); renderInventoryTable(); }
+
+    function openScreen(screen) {
+      document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+      $("screen-" + screen).classList.add("active");
+      document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.screen === screen));
+      $("fabButton").style.display = screen === "inventory" ? "grid" : "none";
+    }
+
+    function changeStock(id, delta) {
+      const p = productos.find(x => String(x.id) === String(id));
+      if (!p) return;
+      p.stock = Math.max(0, Number(p.stock) + Number(delta));
+      p.estado = calcularEstado(p.stock, p.stockMinimo);
+      cambiosPendientes.set(String(id), { id: p.id, stock: p.stock });
+      renderAll();
+      if (saveTimers[id]) clearTimeout(saveTimers[id]);
+      saveTimers[id] = setTimeout(() => sendChange(id), 450);
+    }
+
+    async function sendChange(id) {
+      const cambio = cambiosPendientes.get(String(id));
+      if (!cambio) return;
+      try {
+        await fetch(URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "actualizarStock", id: cambio.id, stock: cambio.stock })
+        });
+        cambiosPendientes.delete(String(id));
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        setSyncStatus("Error al guardar cambios", true);
+      }
+    }
+
+    async function manualSync() {
+      if (isSyncing) return;
+      isSyncing = true;
+      try { await cargarProductos(); } finally { isSyncing = false; }
+    }
+
+    function initEvents() {
+      window.openCategory = openCategory;
+      window.setCategory = setCategory;
+      window.changeStock = changeStock;
+
+      document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => openScreen(btn.dataset.screen)));
+      $("searchInput").addEventListener("input", (e) => { searchTerm = e.target.value.trim().toLowerCase(); renderInventoryTable(); });
+      $("syncBtn").addEventListener("click", manualSync);
+      $("alertsRefreshBtn").addEventListener("click", manualSync);
+      $("goCategoriesBtn").addEventListener("click", () => openScreen("categories"));
+      $("goInventoryBtn").addEventListener("click", () => openScreen("inventory"));
+      $("goInventoryBtn2").addEventListener("click", () => openScreen("inventory"));
+      $("resetFiltersBtn").addEventListener("click", () => { searchTerm = ""; selectedCategory = "TODOS"; $("searchInput").value = ""; renderAll(); });
+      $("filterBtn").addEventListener("click", () => openScreen("categories"));
+      $("fabButton").addEventListener("click", () => alert("Luego podemos convertir este botón en: agregar producto, venta rápida o nuevo movimiento."));
+    }
+
+    function registerSW() {
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(console.error));
+      }
+    }
+
+    function hideSplash() { setTimeout(() => $("splash").classList.add("hide"), 1300); }
+
+    async function boot() {
+      initEvents();
+      registerSW();
+      hideSplash();
+      await cargarProductos();
+      setInterval(() => { if (cambiosPendientes.size === 0) manualSync(); }, 10000);
+    }
+    boot();
+  </script>
+</body>
+</html>

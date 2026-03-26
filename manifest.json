@@ -1,0 +1,13 @@
+{
+  "name": "Pierina's Inventory",
+  "short_name": "Pierina's",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d0d10",
+  "theme_color": "#d80f1f",
+  "description": "App de inventario móvil para Pierina's Tienda & Bodega.",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
