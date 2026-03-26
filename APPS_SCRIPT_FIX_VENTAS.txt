@@ -1,0 +1,232 @@
+PEGA ESTE APPS SCRIPT COMPLETO PARA QUE VENTAS DEL DÍA FUNCIONE BIEN
+
+function normalizarFecha(valor) {
+  if (Object.prototype.toString.call(valor) === "[object Date]" && !isNaN(valor)) {
+    return Utilities.formatDate(valor, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  const texto = String(valor || "").trim();
+  if (!texto) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+
+  const match = texto.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (match) {
+    const d = match[1].padStart(2, "0");
+    const m = match[2].padStart(2, "0");
+    const y = match[3];
+    return `${y}-${m}-${d}`;
+  }
+  return texto;
+}
+
+function doGet(e) {
+  const tipo = e && e.parameter && e.parameter.tipo ? e.parameter.tipo : "productos";
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaProductos = ss.getSheetByName("Productos");
+  const hojaVentas = ss.getSheetByName("Ventas");
+
+  if (tipo === "productos") {
+    const data = hojaProductos.getDataRange().getValues();
+    const headers = data[0];
+    const rows = data.slice(1);
+
+    const productos = rows.map(row => {
+      let obj = {};
+      headers.forEach((header, i) => {
+        obj[header] = row[i];
+      });
+      return obj;
+    });
+
+    return ContentService
+      .createTextOutput(JSON.stringify(productos))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (tipo === "ventasHoy") {
+    const data = hojaVentas.getDataRange().getValues();
+    const headers = data[0];
+    const rows = data.slice(1);
+
+    const hoy = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+
+    const ventasHoy = rows
+      .filter(row => normalizarFecha(row[1]) === hoy)
+      .map(row => {
+        let obj = {};
+        headers.forEach((header, i) => {
+          obj[header] = row[i];
+        });
+        return obj;
+      });
+
+    return ContentService
+      .createTextOutput(JSON.stringify(ventasHoy))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (tipo === "resumenHoy") {
+    const data = hojaVentas.getDataRange().getValues();
+    const rows = data.slice(1);
+
+    const hoy = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+
+    let totalVentas = 0;
+    let totalUnidades = 0;
+    let totalIngreso = 0;
+
+    rows.forEach(row => {
+      if (normalizarFecha(row[1]) === hoy) {
+        totalVentas++;
+        totalUnidades += Number(row[6]) || 0;
+        totalIngreso += Number(row[8]) || 0;
+      }
+    });
+
+    const resumen = {
+      fecha: hoy,
+      totalVentas,
+      totalUnidades,
+      totalIngreso
+    };
+
+    return ContentService
+      .createTextOutput(JSON.stringify(resumen))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ error: "Tipo no válido" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hojaProductos = ss.getSheetByName("Productos");
+  const hojaVentas = ss.getSheetByName("Ventas");
+
+  const data = JSON.parse(e.postData.contents);
+  const action = data.action;
+
+  if (action === "agregar") {
+    let estado = "ok";
+
+    if (Number(data.stock) <= 0) {
+      estado = "agotado";
+    } else if (Number(data.stock) <= Number(data.stockMinimo)) {
+      estado = "bajo";
+    }
+
+    hojaProductos.appendRow([
+      data.id,
+      data.producto,
+      data.categoria,
+      data.stock,
+      data.precio,
+      data.stockMinimo,
+      estado
+    ]);
+  }
+
+  if (action === "actualizarStock") {
+    const rows = hojaProductos.getDataRange().getValues();
+
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] == data.id) {
+        let nuevoStock = Number(data.stock);
+        let stockMinimo = Number(rows[i][5]);
+        let nuevoEstado = "ok";
+
+        if (nuevoStock <= 0) {
+          nuevoEstado = "agotado";
+        } else if (nuevoStock <= stockMinimo) {
+          nuevoEstado = "bajo";
+        }
+
+        hojaProductos.getRange(i + 1, 4).setValue(nuevoStock);
+        hojaProductos.getRange(i + 1, 7).setValue(nuevoEstado);
+        break;
+      }
+    }
+  }
+
+  if (action === "actualizarPrecio") {
+    const rows = hojaProductos.getDataRange().getValues();
+
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] == data.id) {
+        hojaProductos.getRange(i + 1, 5).setValue(data.precio);
+        break;
+      }
+    }
+  }
+
+  if (action === "registrarVenta") {
+    const rows = hojaProductos.getDataRange().getValues();
+
+    const hoy = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+    const hora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH:mm:ss");
+
+    const idVenta = hojaVentas.getLastRow();
+
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] == data.idProducto) {
+        const stockActual = Number(rows[i][3]);
+        const stockMinimo = Number(rows[i][5]);
+        const cantidadVendida = Number(data.cantidad);
+        const precioUnitario = Number(rows[i][4]);
+
+        const nuevoStock = stockActual - cantidadVendida;
+
+        if (nuevoStock < 0) {
+          return ContentService
+            .createTextOutput(JSON.stringify({ error: "Stock insuficiente" }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+
+        let nuevoEstado = "ok";
+        if (nuevoStock <= 0) {
+          nuevoEstado = "agotado";
+        } else if (nuevoStock <= stockMinimo) {
+          nuevoEstado = "bajo";
+        }
+
+        hojaProductos.getRange(i + 1, 4).setValue(nuevoStock);
+        hojaProductos.getRange(i + 1, 7).setValue(nuevoEstado);
+
+        const total = precioUnitario * cantidadVendida;
+
+        hojaVentas.appendRow([
+          idVenta,
+          hoy,
+          hora,
+          rows[i][0],
+          rows[i][1],
+          rows[i][2],
+          cantidadVendida,
+          precioUnitario,
+          total
+        ]);
+
+        return ContentService
+          .createTextOutput(JSON.stringify({
+            mensaje: "venta registrada",
+            producto: rows[i][1],
+            cantidad: cantidadVendida,
+            total: total,
+            nuevoStock: nuevoStock,
+            estado: nuevoEstado
+          }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: "Producto no encontrado" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ mensaje: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
