@@ -14,3 +14,5 @@ Incluye:
 - Alertas
 - Ajustes
 - PWA instalable
+
+- Tema visual con opción Dark/Light
