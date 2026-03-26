@@ -16,3 +16,6 @@ Incluye:
 - PWA instalable
 
 - Tema visual con opción Dark/Light
+
+- La barra de búsqueda aparece en Categorías
+- En Inventario puedes tocar un producto para ver sus detalles

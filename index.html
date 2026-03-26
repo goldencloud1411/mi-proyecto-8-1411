@@ -42,7 +42,7 @@
     .brand-copy p{margin:5px 0 0;color:var(--muted);font-size:12px}
     .icon-btn{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;background:var(--panel-2);color:var(--text);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
     .icon-btn svg{width:21px;height:21px}
-    .search-row{display:flex;gap:10px;margin-top:14px}
+    .search-row{display:none;gap:10px;margin-top:14px}
     .search-wrap{flex:1;display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:18px;background:var(--panel);color:var(--muted);border:1px solid rgba(255,255,255,.04)}
     .search-wrap input{flex:1;border:none;outline:none;background:transparent;color:var(--text);font-size:15px}
     .search-wrap input::placeholder{color:#878790}
@@ -61,7 +61,7 @@
     .category-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
     .cat-card{background:var(--panel);border-radius:22px;padding:22px 16px;border:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column;gap:10px;cursor:pointer;box-shadow:var(--shadow);justify-content:center;align-items:center;min-height:158px;text-align:center}
     .cat-icon{display:none}
-    .cat-title{font-size:22px;font-weight:800;line-height:1.1}
+    .cat-title{font-size:22px;font-weight:800;line-height:1.1;color:var(--text)}
     .cat-sub{font-size:15px;color:var(--muted)}
     .chips{display:flex;gap:8px;overflow:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
     .chips::-webkit-scrollbar{display:none}
@@ -110,6 +110,25 @@
     .nav-btn{border:none;background:none;color:#b4b4bb;cursor:pointer;padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px}
     .nav-btn svg{width:20px;height:20px}
     .nav-btn.active{color:var(--brand-2);font-weight:800}
+    
+    .product-click{cursor:pointer}
+    .modal-overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; align-items:flex-end; justify-content:center;
+      z-index:80; padding:18px;
+    }
+    .modal-overlay.show{display:flex}
+    .modal-card{
+      width:100%; max-width:420px; background:var(--panel); color:var(--text); border-radius:24px;
+      border:1px solid rgba(255,255,255,.06); box-shadow:var(--shadow); padding:18px 18px 20px;
+    }
+    .modal-top{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px}
+    .modal-title{font-size:22px; font-weight:800; line-height:1.08; margin:0}
+    .modal-close{border:none; background:var(--panel-3); color:var(--text); width:38px; height:38px; border-radius:12px; cursor:pointer}
+    .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px}
+    .detail-box{background:var(--panel-2); border-radius:16px; padding:14px}
+    .detail-label{font-size:12px; color:var(--muted); margin-bottom:6px}
+    .detail-value{font-size:17px; font-weight:800}
+
     @media (min-width:441px){body{background:#060608}.app{box-shadow:0 0 0 1px rgba(255,255,255,.05)}}
   </style>
 </head>
@@ -236,6 +255,36 @@
       </section>
     </main>
 
+    <div class="modal-overlay" id="productModal">
+      <div class="modal-card">
+        <div class="modal-top">
+          <div>
+            <h3 class="modal-title" id="modalProductName">Producto</h3>
+            <div style="color:var(--muted); font-size:14px;" id="modalProductCategory"></div>
+          </div>
+          <button class="modal-close" id="closeModalBtn" type="button">✕</button>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-box">
+            <div class="detail-label">Precio</div>
+            <div class="detail-value" id="modalProductPrice">S/ 0.00</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Stock</div>
+            <div class="detail-value" id="modalProductStock">0</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Stock mínimo</div>
+            <div class="detail-value" id="modalProductMin">0</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Estado</div>
+            <div class="detail-value" id="modalProductStatus">OK</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button class="fab" id="fabButton" aria-label="Acción rápida">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
         <path d="M12 5v14M5 12h14"/>
@@ -275,6 +324,7 @@
     let saveTimers = {};
     let isSyncing = false;
     let currentTheme = localStorage.getItem("pierinas-theme") || "dark";
+    let modalProduct = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -335,12 +385,13 @@
     }
 
     function renderCategoryGrid() {
-      const cats = getCategories();
+      const cats = getCategories().filter(cat => String(cat).toLowerCase().includes(searchTerm));
       $("categoryGrid").innerHTML = cats.map(cat => {
         const count = cat === "TODOS" ? productos.length : productos.filter(p => p.categoria === cat).length;
         const safe = cat.replace(/'/g, "\'");
         return `<button class="cat-card" onclick="openCategory('${safe}')"><div class="cat-title">${cat}</div><div class="cat-sub">${count} producto(s)</div></button>`;
       }).join("");
+      if (!cats.length) $("categoryGrid").innerHTML = `<div class="empty" style="grid-column:1/-1">No hay categorías que coincidan con tu búsqueda.</div>`;
     }
 
     function filteredProducts() {
@@ -376,7 +427,7 @@
         return;
       }
       $("inventoryTable").innerHTML = items.map(p => `
-        <div class="table-row">
+        <div class="table-row product-click" onclick="openProductDetails(\'${String(p.id).replace(/\'/g, "\\\'")}\')">
           <div class="prod-main">
             <div class="prod-info">
               <div class="prod-name">${p.producto}</div>
@@ -442,11 +493,40 @@
     function setCategory(cat) { selectedCategory = cat; renderChips(); renderInventoryTable(); }
     function openCategory(cat) { selectedCategory = cat; openScreen("inventory"); renderChips(); renderInventoryTable(); }
 
+    function updateSearchVisibility(screen) {
+      $("searchInput").value = "";
+      searchTerm = "";
+      $("filterBtn").style.display = screen === "categories" ? "grid" : "none";
+      $("searchInput").placeholder = screen === "categories" ? "Buscar categoría..." : "Buscar producto...";
+      document.querySelector(".search-row").style.display = screen === "categories" ? "flex" : "none";
+    }
+
     function openScreen(screen) {
       document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
       $("screen-" + screen).classList.add("active");
       document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.screen === screen));
       $("fabButton").style.display = screen === "inventory" ? "grid" : "none";
+      updateSearchVisibility(screen);
+      if (screen === "categories") renderCategoryGrid();
+    }
+
+
+    function openProductDetails(id) {
+      const p = productos.find(x => String(x.id) === String(id));
+      if (!p) return;
+      modalProduct = p;
+      $("modalProductName").textContent = p.producto;
+      $("modalProductCategory").textContent = p.categoria;
+      $("modalProductPrice").textContent = currency(p.precio);
+      $("modalProductStock").textContent = p.stock;
+      $("modalProductMin").textContent = p.stockMinimo;
+      $("modalProductStatus").textContent = p.estado === "out" ? "Agotado" : p.estado === "low" ? "Stock bajo" : "OK";
+      $("productModal").classList.add("show");
+    }
+
+    function closeProductDetails() {
+      $("productModal").classList.remove("show");
+      modalProduct = null;
     }
 
     function changeStock(id, delta) {
@@ -489,7 +569,7 @@
       window.changeStock = changeStock;
 
       document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => openScreen(btn.dataset.screen)));
-      $("searchInput").addEventListener("input", (e) => { searchTerm = e.target.value.trim().toLowerCase(); renderInventoryTable(); });
+      $("searchInput").addEventListener("input", (e) => { searchTerm = e.target.value.trim().toLowerCase(); if ($("screen-categories").classList.contains("active")) { renderCategoryGrid(); } });
       $("syncBtn").addEventListener("click", manualSync);
       $("alertsRefreshBtn").addEventListener("click", manualSync);
       $("goCategoriesBtn").addEventListener("click", () => openScreen("categories"));
@@ -500,6 +580,9 @@
       $("fabButton").addEventListener("click", () => alert("Luego podemos convertir este botón en: agregar producto, venta rápida o nuevo movimiento."));
       const themeBtn = $("themeToggleBtn");
       if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
+      $("closeModalBtn").addEventListener("click", closeProductDetails);
+      $("productModal").addEventListener("click", (e) => { if (e.target.id === "productModal") closeProductDetails(); });
+      window.openProductDetails = openProductDetails;
     }
 
     function registerSW() {
@@ -513,6 +596,7 @@
     async function boot() {
       applyTheme(currentTheme);
       initEvents();
+      updateSearchVisibility("home");
       registerSW();
       hideSplash();
       await cargarProductos();
